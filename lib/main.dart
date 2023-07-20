@@ -90,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
         index: _selectedIndex,
         children: <Widget>[
           Text('Hello'),
-          ListPages(),
+          NewsTabPage(),
           SettingsPage(),
         ],
       ),
@@ -120,26 +120,65 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class NewsTabPage extends StatelessWidget {
+class NewsTabPage extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return _NewsTabState();
+  }
+}
+
+class _NewsTabState extends State<NewsTabPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final List<Tab> myTabs = [
-    Tab(text: 'Tab 1'),
-    Tab(text: 'Tab 2'),
-    Tab(text: 'Tab 3'),
+    Tab(text: 'Baidu'),
+    Tab(text: 'V2ex'),
+    Tab(text: 'Github'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: myTabs.length, vsync: this);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Tabbed Page Example'),
         bottom: TabBar(
           tabs: myTabs,
+          controller: _tabController,
         ),
+        toolbarHeight: 0,
       ),
       body: TabBarView(
+        controller: _tabController,
         children: myTabs.map((Tab tab) {
           // Replace these containers with your actual tab content
-          return Center(child: Text(tab.text.toString()));
+          if (tab.text == 'Baidu') {
+            return ListPages();
+          } else if (tab.text == 'V2ex') {
+            return ListView.builder(
+                itemCount: 10, // Replace with the number of items in each list
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: Icon(Icons.star),
+                    title: Text('Item $index in ${tab.text}'),
+                    subtitle: Text('Subtitle for Item $index'),
+                  );
+                });
+          } else {
+            return ListView.builder(
+                itemCount: 10, // Replace with the number of items in each list
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: Icon(Icons.star),
+                    title: Text('Item $index in ${tab.text}'),
+                    subtitle: Text('Subtitle for Item $index'),
+                  );
+                });
+          }
         }).toList(),
       ),
     );
@@ -285,9 +324,12 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          CustomListItem(icon: Icons.share, title: "Share with friends", onPressed: () {}),
-          CustomListItem(icon: Icons.star_rate, title: "Rate us", onPressed: () {}),
-          CustomListItem(icon: Icons.info_outline, title: "About", onPressed: () {}),
+          CustomListItem(
+              icon: Icons.share, title: "Share with friends", onPressed: () {}),
+          CustomListItem(
+              icon: Icons.star_rate, title: "Rate us", onPressed: () {}),
+          CustomListItem(
+              icon: Icons.info_outline, title: "About", onPressed: () {}),
         ],
       ),
     );
@@ -321,8 +363,10 @@ class CustomListItem extends StatelessWidget {
                 Text(title, style: TextStyle(fontSize: 16.0)),
               ],
             ),
-            Icon(Icons.arrow_forward_ios,
-            size: 16,),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+            ),
           ],
         ),
       ),
