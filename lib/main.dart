@@ -77,7 +77,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onFabClicked() {
     print("on fab clicked.");
-    fetchNews();
+    // fetchNews();
+    fetchV2ex();
   }
 
   @override
@@ -159,15 +160,7 @@ class _NewsTabState extends State<NewsTabPage>
           if (tab.text == 'Baidu') {
             return ListPages();
           } else if (tab.text == 'V2ex') {
-            return ListView.builder(
-                itemCount: 10, // Replace with the number of items in each list
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: Icon(Icons.star),
-                    title: Text('Item $index in ${tab.text}'),
-                    subtitle: Text('Subtitle for Item $index'),
-                  );
-                });
+            return V2exPages();
           } else {
             return ListView.builder(
                 itemCount: 10, // Replace with the number of items in each list
@@ -192,11 +185,13 @@ class ListPages extends StatefulWidget {
   }
 }
 
-class _ListPagesState extends State<ListPages> {
+class _ListPagesState extends State<ListPages>
+    with AutomaticKeepAliveClientMixin {
   List<News> _newsList = [];
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Container(
       child: ListView.builder(
         itemCount: _newsList.length,
@@ -216,13 +211,14 @@ class _ListPagesState extends State<ListPages> {
               ),
             ),
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) {
+              Navigator.push(context, MaterialPageRoute(builder: (ctx) {
                 return Scaffold(
                   appBar: AppBar(
                     title: Text(_newsList[index].title.trim()),
                   ),
                   body: WebViewWidget(
-                    controller: createCrossWebView(_newsList[index].url),
+                    controller:
+                        createCrossWebView(context, _newsList[index].url),
                   ),
                 );
               }));
@@ -243,79 +239,147 @@ class _ListPagesState extends State<ListPages> {
     });
   }
 
-  WebViewController createCrossWebView(String url) {
+  @override
+  bool get wantKeepAlive => true;
+}
+
+class V2exPages extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return _V2exPagesState();
+  }
+}
+
+class _V2exPagesState extends State<V2exPages>
+    with AutomaticKeepAliveClientMixin {
+  List<V2ex> _v2exList = [];
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Container(
+      child: ListView.builder(
+        itemCount: _v2exList.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: Image.network(_v2exList[index].icon),
+            title: Text(_v2exList[index].title.trim(),
+                maxLines: 1,
+                style: TextStyle(fontSize: 16, color: "#232323".getHexColor())),
+            subtitle: Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text(
+                _v2exList[index].time.trim(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: "#545454".getHexColor()),
+              ),
+            ),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: Text(_v2exList[index].title.trim()),
+                  ),
+                  body: WebViewWidget(
+                    controller:
+                        createCrossWebView(context, fixV2exClickUrl(_v2exList[index].url)),
+                  ),
+                );
+              }));
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchV2ex().then((value) {
+      setState(() {
+        _v2exList = value;
+      });
+    });
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}
+
+WebViewController createCrossWebView(BuildContext context, String url) {
 // #docregion platform_features
-    late final PlatformWebViewControllerCreationParams params;
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
-      );
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
+  late final PlatformWebViewControllerCreationParams params;
+  if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+    params = WebKitWebViewControllerCreationParams(
+      allowsInlineMediaPlayback: true,
+      mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+    );
+  } else {
+    params = const PlatformWebViewControllerCreationParams();
+  }
 
-    final WebViewController controller =
-        WebViewController.fromPlatformCreationParams(params);
-    // #enddocregion platform_features
+  final WebViewController controller =
+      WebViewController.fromPlatformCreationParams(params);
+  // #enddocregion platform_features
 
-    controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            debugPrint('WebView is loading (progress : $progress%)');
-          },
-          onPageStarted: (String url) {
-            debugPrint('Page started loading: $url');
-          },
-          onPageFinished: (String url) {
-            debugPrint('Page finished loading: $url');
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint('''
+  controller
+    ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    ..setBackgroundColor(const Color(0x00000000))
+    ..setNavigationDelegate(
+      NavigationDelegate(
+        onProgress: (int progress) {
+          debugPrint('WebView is loading (progress : $progress%)');
+        },
+        onPageStarted: (String url) {
+          debugPrint('Page started loading: $url');
+        },
+        onPageFinished: (String url) {
+          debugPrint('Page finished loading: $url');
+        },
+        onWebResourceError: (WebResourceError error) {
+          debugPrint('''
 Page resource error:
   code: ${error.errorCode}
   description: ${error.description}
   errorType: ${error.errorType}
   isForMainFrame: ${error.isForMainFrame}
           ''');
-          },
-          onNavigationRequest: (NavigationRequest request) {
-            // if (request.url.startsWith('https://www.youtube.com/')) {
-            //   debugPrint('blocking navigation to ${request.url}');
-            //   return NavigationDecision.prevent;
-            // }
-            // debugPrint('allowing navigation to ${request.url}');
-            // return NavigationDecision.navigate;
-            return NavigationDecision.prevent;
-          },
-          onUrlChange: (UrlChange change) {
-            debugPrint('url change to ${change.url}');
-          },
-        ),
-      )
-      ..addJavaScriptChannel(
-        'Toaster',
-        onMessageReceived: (JavaScriptMessage message) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message.message)),
-          );
         },
-      )
-      ..loadRequest(Uri.parse(url));
+        onNavigationRequest: (NavigationRequest request) {
+          // if (request.url.startsWith('https://www.youtube.com/')) {
+          //   debugPrint('blocking navigation to ${request.url}');
+          //   return NavigationDecision.prevent;
+          // }
+          // debugPrint('allowing navigation to ${request.url}');
+          // return NavigationDecision.navigate;
+          return NavigationDecision.prevent;
+        },
+        onUrlChange: (UrlChange change) {
+          debugPrint('url change to ${change.url}');
+        },
+      ),
+    )
+    ..addJavaScriptChannel(
+      'Toaster',
+      onMessageReceived: (JavaScriptMessage message) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message.message)),
+        );
+      },
+    )
+    ..loadRequest(Uri.parse(url));
 
-    // #docregion platform_features
-    if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(true);
-      (controller.platform as AndroidWebViewController)
-          .setMediaPlaybackRequiresUserGesture(false);
-    }
-    // #enddocregion platform_features
-
-    return controller;
+  // #docregion platform_features
+  if (controller.platform is AndroidWebViewController) {
+    AndroidWebViewController.enableDebugging(true);
+    (controller.platform as AndroidWebViewController)
+        .setMediaPlaybackRequiresUserGesture(false);
   }
+  // #enddocregion platform_features
+
+  return controller;
 }
 
 class SettingsPage extends StatelessWidget {
@@ -376,15 +440,8 @@ class CustomListItem extends StatelessWidget {
 
 Future<List<News>> fetchNews() async {
   print("start fetchNews -->");
-  final response = await http
-      .get(Uri.parse('https://top.baidu.com/board?tab=realtime'), headers: {
-    "Access-Control-Allow-Origin": "*", // Required for CORS support to work
-    "Access-Control-Allow-Credentials":
-        'true', // Required for cookies, authorization headers with HTTPS
-    "Access-Control-Allow-Headers":
-        "Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,locale",
-    "Access-Control-Allow-Methods": "POST, OPTIONS"
-  });
+  final response =
+      await http.get(Uri.parse('https://top.baidu.com/board?tab=realtime'));
   print("response.statusCode = " + response.statusCode.toString());
   List<News> news = [];
   if (response.statusCode == 200) {
@@ -445,6 +502,80 @@ class News {
   String url = "";
 
   News(this.title, this.desc, this.image, this.url);
+}
+
+Future<List<V2ex>> fetchV2ex() async {
+  print("start fetchV2ex -->");
+  final response = await http.get(Uri.parse('https://www.v2ex.com/?tab=hot'));
+  print("response.statusCode = " + response.statusCode.toString());
+  List<V2ex> v2exList = [];
+  if (response.statusCode == 200) {
+    // If the server did return a 200 OK response,
+    // then parse the JSON.
+    var document = parse(response.body);
+    var itemElement = document.getElementsByClassName("cell item");
+    if (itemElement.isNotEmpty) {
+      for (int i = 0; i < itemElement.length; i++) {
+        var v2ex = V2ex();
+        var element = itemElement[i];
+        print("item: " + element.outerHtml);
+        // icon
+        element
+            .getElementsByClassName("avatar")[0]
+            .attributes
+            .forEach((key, value) {
+          if ("src" == key) {
+            v2ex.icon = value;
+          }
+        });
+        // title
+        v2ex.title = element.getElementsByClassName("item_title")[0].text;
+
+        // author
+        // element.getElementsByClassName("small fade")[0].children.forEach((e1) {
+        //   if ("strong" == e1.localName) {
+        //     v2ex.author = e1.text;
+        //   }
+        // });
+        element.getElementsByTagName("span").forEach((e1) {
+          var text = e1.text;
+          if (e1.text.isNotEmpty && text.contains("前")) {
+            v2ex.time = text;
+          }
+        });
+        // time
+        // v2ex.time = element.getElementsByClassName("small fade")[1].text;
+        // url
+        element
+            .getElementsByClassName("item_title")[0]
+            .getElementsByClassName("topic-link")[0]
+            .attributes
+            .forEach((key, value) {
+          if ("href" == key) {
+            v2ex.url = value;
+            print("v2ex link: " + value);
+          }
+        });
+        v2exList.add(v2ex);
+      }
+    }
+  }
+  return v2exList;
+}
+
+class V2ex {
+  String title = "";
+  String icon = "";
+  String author = "";
+  String time = "";
+  String url = "";
+}
+
+String fixV2exClickUrl(String url) {
+  if (url.startsWith("https://www.v2ex.com")) {
+    return url;
+  }
+  return "https://www.v2ex.com" + url;
 }
 
 extension HexString on String {
