@@ -11,7 +11,13 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 // Import for iOS features.
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+// inappwebview
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'myweb.dart';
+
 void main() {
+  // it should be the first line in main method
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -216,10 +222,11 @@ class _ListPagesState extends State<ListPages>
                   appBar: AppBar(
                     title: Text(_newsList[index].title.trim()),
                   ),
-                  body: WebViewWidget(
-                    controller:
-                        createCrossWebView(context, _newsList[index].url),
-                  ),
+                  body: WebPage(_newsList[index].url),
+                  // body: WebViewWidget(
+                  //   controller:
+                  //       createCrossWebView(context, _newsList[index].url),
+                  // ),
                 );
               }));
             },
